@@ -1,3 +1,8 @@
+#ifndef H264_SEQUENCE_PARAMETER_SET
+#define H264_SEQUENCE_PARAMETER_SET
+
+#include "h264_vui_parameters.h"
+
 typedef struct h264_sequence_parameter_set_t {
     int profile_idc;
     int constraint_set0_flag;
@@ -26,8 +31,10 @@ typedef struct h264_sequence_parameter_set_t {
     int frame_crop_top_offset;
     int frame_crop_bottom_offset;
     int vui_parameters_present_flag;
-    vui_parameters_t vui_parameters;
+    h264_vui_parameters_t *vui_parameters;
 } h264_sequence_parameter_set_t;
 
-h264_sequence_parameter_set_t h264_sequence_parameter_set(h264_stream_t *s);
-void h264_print_sequence_parameter_set(h264_sequence_parameter_set_t sps);
+h264_sequence_parameter_set_t *h264_sequence_parameter_set(h264_stream_t *s);
+void h264_print_sequence_parameter_set(h264_sequence_parameter_set_t *sps);
+
+#endif

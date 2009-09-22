@@ -2,6 +2,9 @@
 #include <stdlib.h>
 
 #include "h264_parse.h"
+#include "h264_sequence_parameter_set.h"
+#include "h264_pic_parameter_set.h"
+#include "h264_slice.h"
 
 void print_byte(unsigned char c) {
     char s[9];
@@ -39,14 +42,58 @@ h264_nal_unit_t *h264_byte_stream_nal_unit(h264_stream_t *s)
     return nu;
 }
 
+// Only latest sps and pps. Good enough for One-Seg
+static h264_sequence_parameter_set_t *latest_sps = NULL;
+static h264_pic_parameter_set_t *latest_pps = NULL;
+
 h264_nal_unit_t *h264_nal_unit(h264_stream_t *s)
 {
     h264_nal_unit_t *nu = malloc(sizeof(h264_nal_unit_t));
     h264_u(s, 1);
     nu->nal_ref_idc = h264_u(s, 2);
     nu->nal_unit_type = h264_u(s, 5);
-    while(h264_next_bits(s, 24) != 0x000001 && h264_more_data_in_byte_stream(s)) {
-        h264_u(s, 8);
+    int NumBytesInRBSP = 0;
+    int prev_bit_pos = s->bit_pos;
+    int prev_byte_pos = s->byte_pos;
+    while (h264_next_bits(s, 24) != 0x000001 && h264_more_data_in_byte_stream(s)) {
+        if (h264_stream_bytes_remaining(s) > 2 && h264_next_bits(s, 24) == 0x000003) {
+            h264_u(s, 24);
+            NumBytesInRBSP += 2;
+        } else {
+            h264_u(s, 8);
+            NumBytesInRBSP++;
+        }
+    }
+    s->bit_pos = prev_bit_pos;
+    s->byte_pos = prev_byte_pos;
+    uint8_t *rbsp_buffer = (uint8_t *)malloc(NumBytesInRBSP);
+    h264_stream_t *rbsp_s = h264_stream_new(rbsp_buffer, NumBytesInRBSP);
+    int i;
+    for (i = 0; i < NumBytesInRBSP; ++i) {
+        rbsp_buffer[i] = h264_u(s, 8);
+        if (h264_stream_bytes_remaining(s) > 2 && h264_next_bits(s, 24) == 0x000003) {
+            rbsp_buffer[i++] = h264_u(s, 8);
+            h264_f(s, 8, 0x03); // emulation_prevention_three_byte
+        }
+    }
+    switch (nu->nal_unit_type) {
+        case 1:
+            nu->rbsp = h264_slice_layer_without_partitioning_rbsp(rbsp_s, nu->nal_unit_type, latest_sps, latest_pps);
+        break;
+        case 5:
+            nu->rbsp = h264_slice_layer_without_partitioning_rbsp(rbsp_s, nu->nal_unit_type, latest_sps, latest_pps);
+        break;
+        case 7:
+            latest_sps = h264_sequence_parameter_set(rbsp_s);
+            nu->rbsp = latest_sps;
+        break;
+        case 8:
+            latest_pps = h264_pic_parameter_set(rbsp_s);
+            nu->rbsp = latest_pps;
+        break;
+        default:
+            nu->rbsp = NULL;
+        break;
     }
     return nu;
 }
@@ -54,8 +101,26 @@ h264_nal_unit_t *h264_nal_unit(h264_stream_t *s)
 h264_nal_unit_t *h264_print_nal_unit(h264_nal_unit_t *nu)
 {
     printf("NAL unit {\n");
-    printf("  nal_ref_idc : %d\n", nu->nal_ref_idc);
-    printf("  nal_unit_type : %d\n", nu->nal_unit_type);
+    printf("  nal_ref_idc: %d\n", nu->nal_ref_idc);
+    printf("  nal_unit_type: %d\n", nu->nal_unit_type);
+    printf("  rbsp: ");
+    switch (nu->nal_unit_type) {
+        case 1:
+            h264_print_slice_layer_without_partitioning_rbsp((h264_slice_rbsp_t *)nu->rbsp, nu->nal_unit_type, latest_sps, latest_pps);
+        break;
+        case 5:
+            h264_print_slice_layer_without_partitioning_rbsp((h264_slice_rbsp_t *)nu->rbsp, nu->nal_unit_type, latest_sps, latest_pps);
+        break;
+        case 7:
+            h264_print_sequence_parameter_set((h264_sequence_parameter_set_t *)nu->rbsp);
+        break;
+        case 8:
+            h264_print_pic_parameter_set((h264_pic_parameter_set_t *)nu->rbsp);
+        break;
+        default:
+            printf("\n");
+        break;
+    }
     printf("}\n");
     return nu;
 }
@@ -105,11 +170,11 @@ uint32_t h264_ue(h264_stream_t *s) {
     uint8_t coded;
     bits = 0;
     while (1) {
-        if (s->size - s->byte_pos <= 1) {
-            read = h264_stream_peek_bytes(s, s->bit_pos) << (8 - s->bit_pos);
+        if (h264_stream_bytes_remaining(s) < 1) {
+            read = h264_stream_peek_bits(s, s->bit_pos) << (8 - s->bit_pos);
             break;
         } else {
-            read = h264_stream_peek_bytes(s, 8);
+            read = h264_stream_peek_bits(s, 8);
             if (bits > 16) {
                 break;
             }
@@ -130,7 +195,23 @@ uint32_t h264_ue(h264_stream_t *s) {
 void h264_f(h264_stream_t *s, uint32_t n, uint32_t pattern) {
     uint32_t val = h264_u(s, n);
     if (val != pattern) {
-        fprintf(stderr, "h264_f Error: fixed-pattern doesn't match. \nexpected: %x \nreality: %x \n", pattern, (unsigned int)val);
+        fprintf(stderr, "h264_f Error: fixed-pattern doesn't match. \nexpected: %x \nactual: %x \n", pattern, (unsigned int)val);
         exit(0);
     }
+}
+
+int32_t h264_se(h264_stream_t *s)
+{
+    uint32_t ret;
+    ret = h264_ue(s);
+    if (!(ret & 0x1)) {
+        ret >>= 1;
+        return (int32_t)(- ret);
+    } 
+    return (ret + 1) >> 1;
+}
+
+void h264_rbsp_trailing_bits(h264_stream_t *s) {
+    h264_f(s, 1, 1);
+    h264_f(s, s->bit_pos, 0);
 }
