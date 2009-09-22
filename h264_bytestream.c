@@ -79,3 +79,8 @@ int h264_bytestream_bytes_remaining(h264_bytestream_t *bs)
 {
     return bs->size - bs->pos;
 }
+
+int h264_bytestream_more_data_left(h264_bytestream_t *bs)
+{
+    return bs->size > bs->pos;
+}
