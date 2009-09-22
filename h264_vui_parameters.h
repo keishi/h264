@@ -34,5 +34,5 @@ typedef struct h264_vui_parameters_t {
     int max_dec_frame_buffering;
 } h264_vui_parameters_t;
 
-vui_parameters_t h264_read_vui_parameters(KCBitStream *bs);
-void h264_print_vui_parameters(vui_parameters_t vp);
+h264_vui_parameters_t h264_read_vui_parameters(h264_stream_t *bs);
+void h264_print_vui_parameters(h264_vui_parameters_t vp);

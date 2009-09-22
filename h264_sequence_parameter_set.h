@@ -29,5 +29,5 @@ typedef struct h264_sequence_parameter_set_t {
     vui_parameters_t vui_parameters;
 } h264_sequence_parameter_set_t;
 
-h264_sequence_parameter_set_t h264_sequence_parameter_set(KCBitStream *s);
+h264_sequence_parameter_set_t h264_sequence_parameter_set(h264_stream_t *s);
 void h264_print_sequence_parameter_set(h264_sequence_parameter_set_t sps);
