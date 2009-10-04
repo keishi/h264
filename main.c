@@ -1,4 +1,4 @@
-
+#include <stdio.h>
 #include "h264_parse.h"
 
 int main (int argc, char const *argv[])

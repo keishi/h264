@@ -38,7 +38,7 @@ test_h264_parse.o: test_h264_parse.h test_h264_parse.c
 all_tests.o: all_tests.c
 	$(CC) $(CFLAGS) all_tests.c
 
-all_tests: h264_stream.o test_h264_stream.o h264_parse.o test_h264_parse.o all_tests.o
+all_tests: h264_stream.o CuTest.o test_h264_stream.o h264_parse.o test_h264_parse.o all_tests.o
 	$(CC) $(LFLAGS) $(OBJS) $(TEST_OBJS) all_tests.o -o all_tests
 
 h264_nal_unit.o : h264_nal_unit.h h264_nal_unit.c
