@@ -49,8 +49,12 @@ CuString* CuStringNew(void)
 
 void CuStringResize(CuString* str, int newSize)
 {
-	str->buffer = (char*) realloc(str->buffer, sizeof(char) * newSize);
-	str->size = newSize;
+        char *t = (char*) realloc(str->buffer, sizeof(char) * newSize);
+        if (t)
+        {
+            str->buffer = t;
+            str->size = newSize;
+        }
 }
 
 void CuStringAppend(CuString* str, const char* text)
