@@ -21,7 +21,7 @@ h264_nal_unit_t *h264_byte_stream_nal_unit(h264_stream_t *s)
     if (!h264_more_data_in_byte_stream(s)) {
         return NULL;
     }
-    h264_nal_unit_t *nu;
+    h264_nal_unit_t *nu = NULL;
     while (h264_next_bits(s, 24) != 0x000001 && 
         h264_next_bits(s, 36) != 0x00000001) {
         h264_f(s, 8, 0x00); // leading_zero_8bits
