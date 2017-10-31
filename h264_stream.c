@@ -31,6 +31,10 @@ h264_stream_t *h264_stream_from_file(char *path)
     rewind(fp);
     
     buffer = (uint8_t *)malloc(file_size);
+    if (buffer == NULL)
+    {
+        return (NULL);
+    }
     assert(buffer);
     
     result = fread(buffer, 1, file_size, fp);
