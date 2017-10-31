@@ -7,10 +7,13 @@
 h264_stream_t *h264_stream_new(uint8_t *data, int size)
 {
     h264_stream_t *s = malloc(sizeof(h264_stream_t));
-    s->data = data;
-    s->size = size;
-    s->bit_pos = 7;
-    s->byte_pos = 0;
+    if (s)
+    {
+        s->data = data;
+        s->size = size;
+        s->bit_pos = 7;
+        s->byte_pos = 0;
+    }
     return s;
 }
 
