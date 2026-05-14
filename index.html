@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wet Cobblestones &middot; three.js + WebGPU</title>
+<style>
+  html, body { margin:0; padding:0; height:100%; background:#000; overflow:hidden; color:#888; font:11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  canvas { display:block; width:100%; height:100%; }
+  #hud { position:fixed; top:10px; left:12px; letter-spacing:.04em; pointer-events:none; opacity:.7; }
+  #err { position:fixed; inset:0; display:none; align-items:center; justify-content:center; padding:24px; background:#000; color:#c66; text-align:center; }
+</style>
+</head>
+<body>
+<div id="hud">wet cobblestones &middot; drag to orbit &middot; three.js + webgpu</div>
+<div id="err"></div>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.170.0/build/three.webgpu.js",
+    "three/tsl": "https://unpkg.com/three@0.170.0/build/three.tsl.js",
+    "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module" src="./main.js"></script>
+</body>
+</html>
